@@ -20,6 +20,17 @@ def teamvteam():
     response = ipl.teamVteamAPI(team1,team2)
     print(response)
     return jsonify(response)
+@app.route('/api/team-record')
+def team_record():
+    team_name = request.args.get('team')
+    response = ipl.teamAPI(team_name)
+    return response
+
+@app.route('/api/batting-record')
+def batting_record():
+    batsman_name = request.args.get('batsman')
+    response = ipl.batsmanAPI(batsman_name)
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)
