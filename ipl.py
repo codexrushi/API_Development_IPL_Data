@@ -35,4 +35,70 @@ def teamVteamAPI(team1,team2):
         return response
     else:
         return {'message':'invalid team name'}
+def batsmanRecord(batsman, df):
+    if df.empty:
+        return np.nan
+    out = df[df.player_out == batsman].shape[0]
+    df = df[df['batter'] == batsman]
+    inngs = df.ID.unique().shape[0]
+    runs = df.batsman_run.sum()
+    fours = df[(df.batsman_run == 4) & (df.non_boundary == 0)].shape[0]
+    sixes = df[(df.batsman_run == 6) & (df.non_boundary == 0)].shape[0]
+    if out:
+        avg = runs / out
+    else:
+        avg = np.inf
+
+    nballs = df[~(df.extra_type == 'wides')].shape[0]
+    if nballs:
+        strike_rate = runs / nballs * 100
+    else:
+        strike_rate = 0
+    gb = df.groupby('ID').sum()
+    fifties = gb[(gb.batsman_run >= 50) & (gb.batsman_run < 100)].shape[0]
+    hundreds = gb[gb.batsman_run >= 100].shape[0]
+    try:
+        highest_score = gb.batsman_run.sort_values(ascending=False).head(1).values[0]
+        hsindex = gb.batsman_run.sort_values(ascending=False).head(1).index[0]
+        if (df[df.ID == hsindex].player_out == batsman).any():
+            highest_score = str(highest_score)
+        else:
+            highest_score = str(highest_score) + '*'
+    except:
+        highest_score = gb.batsman_run.max()
+
+    not_out = inngs - out
+    mom = df[df.Player_of_Match == batsman].drop_duplicates('ID', keep='first').shape[0]
+    data = {
+        'innings': inngs,
+        'runs': runs,
+        'fours': fours,
+        'sixes': sixes,
+        'avg': avg,
+        'strikeRate': strike_rate,
+        'fifties': fifties,
+        'hundreds': hundreds,
+        'highestScore': highest_score,
+        'notOut': not_out,
+        'mom': mom
+    }
+
+    return data
+
+
+def batsmanVsTeam(batsman, team, df):
+    df = df[df.BowlingTeam == team].copy()
+    return batsmanRecord(batsman, df)
+
+
+def batsmanAPI(batsman, balls=batter_data):
+    df = balls[balls.innings.isin([1, 2])]  # Excluding Super overs
+    self_record = batsmanRecord(batsman, df=df)
+    TEAMS = matches.Team1.unique()
+    against = {team: batsmanVsTeam(batsman, team, df) for team in TEAMS}
+    data = {
+        batsman: {'all': self_record,
+                  'against': against}
+    }
+    return json.dumps(data, cls=NpEncoder)
 
